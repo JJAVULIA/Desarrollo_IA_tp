@@ -1,0 +1,480 @@
+
+import math
+from statistics import mean 
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from pathlib import Path
+from urllib.request import urlretrieve
+
+# Las mayúsculas indican por convención que la URL se trata como una constante.
+URL_TITANIC = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/titanic.csv"
+ruta_titanic = Path("data/titanic.csv")
+
+# Crea la carpeta `data`; también crea carpetas intermedias y no falla si ya existe.
+ruta_titanic.parent.mkdir(parents=True, exist_ok=True)
+
+if not ruta_titanic.exists():
+    urlretrieve(URL_TITANIC, ruta_titanic)
+    print(f"Archivo descargado en: {ruta_titanic}")
+else:
+    print(f"El archivo ya existe en: {ruta_titanic}")
+
+
+#creo el DataFrame
+df = pd.read_csv(ruta_titanic)
+print (df)
+
+
+"""## Ejercicio 7 — Selección y filtros combinados
+1. Seleccionar las personas de tercera clase (`pclass == 3`) con edad conocida menor a 18 años.
+2. Mostrar solamente `sex`, `age`, `fare` y `survived`, ordenadas por edad de menor a mayor.
+3. Informar cuántas personas cumplen las condiciones y qué porcentaje representan sobre el total del dataset.
+**Pista:** combinar condiciones con `&` y encerrar cada condición entre paréntesis; usar `.loc` y `.sort_values()`."""
+
+# 1. filtrar personas
+condicion = (df ["pclass"] == 3) & (df["age"] < 18)
+pasajeros_filtrados_x_clase_y_edad = df[condicion]
+
+#2. tablas de interés
+columnas_de_interes = ["sex", "age", "fare", "survived"]
+
+#ordenadas por edad de menor a mayor
+columnas_de_interes_ordenadas = pasajeros_filtrados_x_clase_y_edad [columnas_de_interes].sort_values(by = "age")
+
+#mostrar resultado
+print ("a continuación se muestran los pasajeros de tercera clase con edad conocida menor a 18:")
+display (columnas_de_interes_ordenadas)
+
+#3. cuantas personas cumplen la condición y qué porcentaje representan sobre el total del dataset
+cantidad_personas_cumplen_con_condicion = len(pasajeros_filtrados_x_clase_y_edad)
+total_pasajeros_dataset = len(df)
+porcentaje = (cantidad_personas_cumplen_con_condicion / total_pasajeros_dataset) * 100
+
+print (f"Cantidad de personas que cumplen las condiciones: {cantidad_personas_cumplen_con_condicion}")
+print (f"porcentaje que representan esas personas sobre el total del dataset {porcentaje:.2f}%")
+
+
+"""EJERCICIO 8: Diagnóstico de valores faltantes
+
+1. Crear una tabla con la cantidad y el porcentaje de valores nulos de cada columna.
+2. Mostrar únicamente las columnas con datos faltantes, ordenadas de mayor a menor porcentaje.
+3. Crear una copia de `df` y completar las edades ausentes con la mediana de `age`.
+4. Comparar el promedio de edad antes y después de completar los datos. Explicar por qué podría cambiar.
+
+**Pista:** usar `.isna()`, `.sum()`, `.copy()` y `.fillna()`. 
+Conservar `df` sin modificar para los demás ejercicios."""
+
+#1. buscar las celdas vacias y sumarlas por columnas
+cantidad_nulos = df.isna().sum()
+
+# porcentaje de valores nulos.
+porcentaje_nulos = cantidad_nulos/len(df)*100
+
+# creo la tabla con la cantidad y porcentaje de valores nulos por columna
+tabla_nulos = pd.DataFrame ({
+    "cantidad": cantidad_nulos,
+    "porcentaje": porcentaje_nulos
+})
+print (tabla_nulos)
+
+#2 mostrar unicamente columnas con datos faltantes ordenadas de mayor a menor porcentaje
+columnas_con_datos_nulos = tabla_nulos [tabla_nulos["cantidad"] > 0]
+tabla_nulos_ordenada =columnas_con_datos_nulos.sort_values(by="porcentaje", ascending=False)
+print ("columnas con datos faltantes, ordenadas de mayor a menor porcentaje:")
+display(tabla_nulos_ordenada)
+
+#3. Creo copia de DF y completo edad ausentes con la mediana de age.
+copia_df =df.copy()
+mediana_edad = df ["age"].median()
+copia_df ["age"] = copia_df ["age"].fillna(mediana_edad)
+print (f"la mediana calculada es {mediana_edad} años y ya se usó para rellenar los espacios vacíos")
+print (copia_df)
+
+#4 comparo el promedio de antes y dsp de completar datos.
+promedio_antes = df ["age"].mean()
+promedio_despues = copia_df ["age"].mean ()
+
+print (f"el promedio antes de completar los vacíos era de {promedio_antes:.2f} años y después de completarlos con la mediana es de {promedio_despues:.2f} años")
+
+
+"""Ejercicio 9 — Tarifas y pasajeros destacados
+
+1. Calcular el mínimo, el máximo, la media y la mediana de `fare`.
+2. Mostrar las 10 filas con las tarifas más altas, incluyendo `pclass`, `sex`, `age`, `fare` y `embark_town`.
+3. Contar cuántas personas tienen tarifa igual a cero.
+4. Comparar la media con la mediana y explicar qué efecto podrían tener las tarifas muy altas.
+
+**Pista:** usar `.describe()`, `.median()` y `.sort_values()` o `.nlargest()`."""
+
+#1. 
+tarifa_minima = df["fare"].min()
+tarifa_maxima = df["fare"].max()
+tarifa_promedio = df["fare"].mean()
+tarifa_mediana = df["fare"].median()
+
+print(f"Tarifa Mínima encontrada: ${tarifa_minima}")
+print(f"Tarifa Máxima encontrada: ${tarifa_maxima}")
+print(f"Tarifa Promedio (Media): ${tarifa_promedio:.2f}")
+print(f"Tarifa Mediana de los pasajes: ${tarifa_mediana}")
+
+#2. mostrar las 10 filas con tarifas más altas
+columnas_solicitadas = ["pclass", "sex", "age", "fare", "embark_town"]
+top_10_tarifas = df.nlargest (10, "fare") [columnas_solicitadas]
+print ("las 10 tarifas más altas son:")
+display (top_10_tarifas)
+
+#3. cantidad de personas con tarifa igual a cero.
+personas_tarifa_cero = df[df["fare"]== 0]
+cantidad_cero = len(personas_tarifa_cero)
+print(f"la cantidad de personas con tarifa cero fueron {cantidad_cero}")
+
+#4. comparar la media con la mediana
+print (f"la tarifa promedio (media) fue de ${tarifa_promedio:.2f} y la tarifa mediana fue de ${tarifa_mediana:.2f}")
+print ("esto ocurre porque el promedio se ve afectado por valores extremos, mientras que la mediana refleja el valor que pago la mayoría de los pasajeros.")
+
+
+
+
+"""Ejercicio 10 — Supervivencia por clase y sexo
+
+1. Agrupar simultáneamente por `pclass` y `sex`.
+2. Para cada grupo, calcular la cantidad de pasajeros, la cantidad de sobrevivientes y el porcentaje de supervivencia.
+3. Ordenar los grupos por porcentaje de supervivencia e identificar el mayor y el menor.
+4. Escribir una conclusión breve que tenga en cuenta también el tamaño de cada grupo.
+
+**Pista:** usar `groupby()` con una lista de columnas y `.agg()`. En `survived`, la suma cuenta sobrevivientes y la media multiplicada por 100 expresa el porcentaje."""
+
+#1y 2 agrupar por clase y género y calcular
+informe_supervivencia_por_clase_genero = df.groupby(["class", "sex"])["survived"].agg(
+    total_pasajeros = "count",
+    sobreviviente = "sum",
+    porcentaje_supervivencia =lambda x: x.mean() * 100
+)
+
+#3. informe ordenado por porcentaje. Identificar mayor y menor
+informe_ordenado = informe_supervivencia_por_clase_genero.sort_values(by = "porcentaje_supervivencia",ascending =False)
+
+print ("informe de supervivencia ordenado por clase y género")
+display (informe_ordenado)
+
+
+
+"""Ejercicio 11 — Familiares a bordo
+
+1. Crear una copia llamada `df_familias` y agregar `tamano_familia = sibsp + parch + 1`.
+2. Agregar `viaja_solo`, que sea verdadero cuando el tamaño familiar sea 1.
+3. Comparar `viaja_solo` con la columna `alone` e informar la cantidad de diferencias.
+4. Calcular la cantidad de pasajeros y el porcentaje de supervivencia según viajen solos o acompañados.
+
+` sibsp ` indica hermanos/as y cónyuges a bordo; `parch`, padres/madres e hijos/as. El 1 incluye al propio pasajero."""
+
+#1 crear copia de la tabla
+df_familias = df.copy ()
+#crear columna tamaño familia
+df_familias ["tamaño_familia"] = df_familias ["sibsp"] + df_familias ["parch"] + 1
+
+#2 creo columna viaja solo y alone
+df_familias ["viaja_solo"] = df_familias ["tamaño_familia"] == 1
+if "alone" in df_familias.columns:
+    diferencias = (df_familias["viaja_solo"] != df_familias ["alone"]).sum()
+    print (f"cantidad de filas donde no coinciden {diferencias}")
+
+
+"""Ejercicio 12 — Función de resumen reutilizable
+
+1. Definir `resumir_pasajeros(datos)` para recibir un DataFrame y devolver una tupla con la cantidad de pasajeros, la edad promedio y la proporción de supervivencia.
+2. Si el DataFrame está vacío, devolver `(0, None, None)`. Para la edad promedio, ignorar edades ausentes; si no hay ninguna edad conocida, devolver `None` en esa posición.
+3. Aplicar la función al dataset completo y luego a cada clase usando un `for`.
+4. Desempaquetar los resultados y mostrarlos con etiquetas claras; expresar la supervivencia como porcentaje.
+5. Probar también con `df.iloc[0:0]`.
+
+**Pista:** usar `.empty` para comprobar si un DataFrame está vacío y `.notna().any()` para detectar si existen edades conocidas."""
+
+# 1 defino función "resumir_pasajeros(datos)" que recibe un dataset y calcula cant de pasajeros, prom de edad y proporcion de supervivencia y devolver en tupla
+def resumir_pasajeros (datos):
+    if datos.empty:
+        return (0, None, None)
+    
+    cantidad_de_pasajeros =len(datos)
+    #control si existen edades conocidas usando notna.any
+    #notna pregunta ¿No es nulo, no está vacío?. Va a ponerle True a laos pasajeros que SÍ tienen edad escrita y un FALSE a los que tienen la edad en blanco
+    if datos ["age"].notna().any ():
+        edad_promedio_pasajeros = datos ["age"].mean()
+    else:
+        edad_promedio = None #si edades está en blanco, devuelve None.
+    
+    proporcion_supervivencia = datos ["survived"].mean()
+    return (cantidad_de_pasajeros, edad_promedio_pasajeros, proporcion_supervivencia)
+
+#3. Probar función completa
+cantidad_total, edad_total, supervivencia_total = resumir_pasajeros(df)
+print (f"tupla de resultados sobr todo el barco")
+print (f"total pasajeros {cantidad_total}, promedio de edad {edad_total:.2f} años,porcentaje de supervivencia {supervivencia_total:.2f}%")
+#probar función por clase.
+for clase_actual in sorted(df["pclass"].unique()):
+    tabla_filtrada = df[df["pclass"] == clase_actual]
+    
+# Desempaquetamos los tres valores de la tupla en variables independientes
+    cant_clase, edad_clase, super_clase = resumir_pasajeros(tabla_filtrada)
+    
+    print(f"Clase {clase_actual}:")
+    print(f"Pasajeros: {cant_clase}")
+    print(f"Edad Promedio: {edad_clase:.2f} años")
+    print(f"Supervivencia: {super_clase * 100:.2f}%")
+
+# Punto 5: Probar también con df.iloc[0:0] (un DataFrame vacío de prueba)
+print("\n--- PUNTO 5: PRUEBA CON DATAFRAME VACÍO (df.iloc[0:0]) ---")
+df_vacio_prueba = df.iloc[0:0]
+resultado_vacio = resumir_pasajeros(df_vacio_prueba)
+
+# Desempaquetamos el resultado vacío
+cant_v, edad_v, super_v = resultado_vacio
+print(f"Tupla obtenida: {resultado_vacio}")
+print(f"Etiquetas -> Pasajeros: {cant_v} | Edad: {edad_v} | Supervivencia: {super_v}")
+
+
+
+"""Ejercicio 13 — Clasificación de tarifas con una función
+
+1. Definir `clasificar_tarifa(fare)` con estas categorías: `sin dato` si es nula, `gratuita` si vale 0, `económica` si es mayor a 0 y menor a 15,
+ `media` si es mayor o igual a 15 y menor a 50, y `alta` si es mayor o igual a 50.
+2. Aplicar la función a `fare` y guardar el resultado en una columna `categoria_tarifa` de una copia de `df`.
+3. Contar los pasajeros de cada categoría y calcular su porcentaje de supervivencia.
+4. Ordenar los resultados por cantidad de pasajeros usando una función `lambda` como `key` de `sorted()` sobre una lista de tuplas `(categoria, cantidad)`.
+
+**Pista:** usar `pd.isna()`, condicionales, `.apply()` y `.value_counts()`."""
+
+# 1. def función
+def clasificar_tarifa(fare):
+    if pd.isna (fare):
+        return "sin dato"
+    if fare == 0:
+        return 'gratuita'
+    elif fare < 15:
+        return 'económica'
+    elif fare < 50:
+        return 'media'
+    else:
+        return 'alta'
+
+# 2. Crear copia de la tabla original
+df_tarifas = df.copy()
+
+# Aplicar la función a cada fila de la columna 'fare' usando .apply()
+df_tarifas['categoria_tarifa'] = df_tarifas['fare'].apply(clasificar_tarifa)
+
+informe_tarifas = df_tarifas.groupby('categoria_tarifa')['survived'].agg(
+    total_pasajeros='count',
+    porcentaje_supervivencia=lambda x: x.mean() * 100
+)
+# 3 ordenar
+informe_ordenado_tarifas = informe_tarifas.sort_values(by="total_pasajeros", ascending=False)
+
+print("\n--- PUNTO 3: CATEGORÍAS ORDENADAS POR CANTIDAD DE PASAJEROS ---")
+display(informe_ordenado_tarifas)
+
+
+# Punto 4: Análisis conceptual del éxito de supervivencia según la tarifa
+print("\n--- PUNTO 4: ANÁLISIS DE SUPERVIVENCIA ---")
+print("Al analizar el informe, se observa claramente que el grupo con MÁS ÉXITO de supervivencia")
+print("fue el de tarifa 'alta' (con un porcentaje muy superior al resto, superando el 65%).")
+print("Por el contrario, los grupos con MENOS ÉXITO fueron las tarifas 'económica' y 'gratuita',")
+print("donde la tasa de supervivencia cae drásticamente por debajo del 25%.")
+
+
+
+"""Ejercicio 14 — Edades con NumPy
+
+1. Convertir las edades conocidas en un array de NumPy, excluyendo los valores nulos.
+2. Calcular la edad mínima, máxima, promedio y los percentiles 25, 50 y 75.
+3. Usar una máscara booleana para obtener las edades entre 18 y 60 años, ambos incluidos.
+4. Informar cuántas cumplen esa condición y qué porcentaje representan sobre las personas con edad conocida.
+5. Verificar que el promedio obtenido coincide con `df["age"].mean()` usando `np.isclose()`.
+
+**Pista:** usar `.dropna().to_numpy()`, `np.percentile()` y operaciones vectorizadas."""
+
+# Punto 1: Filtramos los nulos de la columna 'age' y lo convertimos a un vector NumPy (.to_numpy())
+edades_filtradas = df["age"].dropna()
+edades_np = edades_filtradas.to_numpy()
+
+# Punto 2: Calcular edad min, max y prom
+edad_min = np.min(edades_np)
+edad_max = np.max(edades_np)
+edad_prom = np.mean(edades_np)
+
+# Percentiles 25%, 50% y 75%
+percentiles = np.percentile(edades_np, [25, 50, 75])
+
+print("--- PUNTO 2: ESTADÍSTICAS CON NUMPY ---")
+print(f"Edad Mínima: {edad_min} años")
+print(f"Edad Máxima: {edad_max} años")
+print(f"Edad Promedio: {edad_prom:.2f} años")
+print(f"Percentil 25: {percentiles[0]:.2f} | Percentil 50: {percentiles[1]:.2f} | Percentil 75: {percentiles[2]:.2f}")
+
+
+# Punto 3: máscara booleana
+# Buscamos edades mayores o iguales a 18 Y menores o iguales a 60 inclusive
+mascara_booleana = (edades_np >= 18) & (edades_np <= 60)
+
+# Aplicamos la máscara pasándola entre corchetes simples para recortar el array
+edades_adultos = edades_np[mascara_booleana]
+
+
+# Punto 4: Informamos la cantidad y el porcentaje sobre las edades conocidas
+cantidad_adultos = len(edades_adultos)
+total_conocidos = len(edades_np)
+porcentaje_adultos = (cantidad_adultos / total_conocidos) * 100
+
+print("\n--- PUNTO 4: FILTRO ENTRE 18 Y 60 AÑOS INCLUSIVE ---")
+print(f"Cantidad de personas en ese rango: {cantidad_adultos} pasajeros")
+print(f"Porcentaje sobre el total de edades conocidas: {porcentaje_adultos:.2f}%")
+
+
+# Punto 5: Verificar promedios usando np.isclose() de tu guía
+# np.isclose compara si dos números flotantes son prácticamente iguales (tolerando mínimos decimales invisibles)
+promedio_pandas = df["age"].mean()
+coinciden = np.isclose(edad_prom, promedio_pandas)
+
+print("\n--- PUNTO 5: VERIFICACIÓN CON NP.ISCLOSE ---")
+print(f"¿El promedio de NumPy coincide con el de Pandas?: {coinciden}")
+
+
+
+"""Ejercicio 15 — Distribución de edades y tarifas
+
+1. Crear una figura con dos subgráficos: un histograma de `age` y un diagrama de caja de `fare`.
+2. Excluir valores nulos únicamente de la columna utilizada en cada gráfico.
+3. Agregar títulos y nombres de ejes; en el histograma, elegir una cantidad de intervalos que permita distinguir la distribución.
+4. Escribir dos observaciones: una sobre las edades más frecuentes y otra sobre las tarifas alejadas de la mayoría. No eliminar valores solo por ser altos.
+
+**Pista:** usar `plt.subplots(1, 2)`, `.hist()`, `.boxplot()` y `plt.tight_layout()`"""
+
+# 1
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+# --- GRÁFICO 1 (Izquierda): Histograma de Edades ---
+# Usamos axes[0] para dibujar en el primer casillero. Filtramos los vacíos con .dropna()
+axes[0].hist(df['age'].dropna(), bins=10, color='skyblue', edgecolor='black')
+axes[0].set_title("Distribución de Edades")
+axes[0].set_xlabel("Edad (años)")
+axes[0].set_ylabel("Cantidad de Pasajeros")
+
+# --- GRÁFICO 2 (Derecha): Diagrama de Caja de Tarifas ---
+# Usamos axes[1] para dibujar en el segundo casillero. Filtramos los vacíos de 'fare'
+axes[1].boxplot(df['fare'].dropna())
+axes[1].set_title("Diagrama de Caja de Tarifas (Fare)")
+axes[1].set_ylabel("Precio del Pasaje ($)")
+
+# Ajustamos el diseño automático para que los títulos no se encimen
+plt.tight_layout()
+
+# Mostramos los gráficos en la ventana interactiva
+plt.show()
+
+
+"""Ejercicio 16 — Informe por puerto y exportación
+
+1. Crear una copia de `df` y completar los nulos de `embark_town` con `Sin dato`.
+2. Elaborar una tabla por puerto con cantidad de pasajeros, tarifa promedio y porcentaje de supervivencia.
+3. Representar el porcentaje de supervivencia por puerto con un gráfico de barras, con eje vertical de 0 a 100.
+4. Guardar la tabla en `data/resumen_titanic_por_puerto.csv`, incluyendo el puerto como columna y sin exportar el índice.
+5. Volver a leer el archivo y comprobar que conserva las mismas columnas y cantidad de filas.
+6. Escribir una conclusión de dos o tres oraciones. Aclarar por qué esta comparación por sí sola no demuestra que el puerto haya causado una diferencia en supervivencia.
+
+**Pista:** usar `.groupby()`, `.agg()`, `.reset_index()` y `.to_csv(index=False)`."""
+
+
+#1. Creamos una copia y rellenamos los puertos vacíos 
+# con la etiqueta 'Desconocido' usando .fillna() para que no queden afuera del informe
+df_puertos = df.copy()
+df_puertos['embark_town'] = df_puertos['embark_town'].fillna('Desconocido')
+
+# 2. Agrupamos por puerto de embarque y calculamos las 3 métricas solicitadas
+informe_puertos = df_puertos.groupby('embark_town').agg(
+    total_pasajeros=('survived', 'count'),            # Cuenta la cantidad de personas
+    tarifa_promedio=('fare', 'mean'),                 # Saca el promedio del costo del pasaje
+    porcentaje_supervivencia=('survived', lambda x: x.mean() * 100) # Saca la tasa de éxito en porcentaje
+).reset_index() # .reset_index() sirve para que 'embark_town' vuelva a ser una columna normal y limpia
+
+# Configuramos Pandas para mostrar 2 decimales prolijos
+pd.options.display.float_format = '{:.2f}'.format
+
+print("--- INFORME FINAL POR PUERTO DE EMBARQUE ---")
+display(informe_puertos)
+
+# 3. Exportamos el informe a un archivo CSV usando el método .to_csv() de tu guía
+# index=False evita que se guarde una columna extra con los números de fila de adorno
+ruta_guardado = "data/resumen_titanic_por_puerto.csv"
+informe_puertos.to_csv(ruta_guardado, index=False)
+
+print(f"\n¡Éxito! El archivo fue exportado correctamente en la ruta: '{ruta_guardado}'")
+
+
+"""Ejercicio 17
+Crear una clase `Sensor` con los atributos `nombre` y `mediciones`. Incorporar métodos para registrar una 
+medición, calcular el promedio y devolver el estado del sensor."""
+
+class Sensor:
+    # 1. El constructor de la clase inicializa los atributos obligatorios
+    def __init__(self, nombre_del_objeto):
+        self.nombre = nombre_del_objeto
+        self.mediciones = []  # Arranca como una lista vacía para almacenar los datos
+
+    # 2. Método para registrar una nueva medición en la lista usando .append()
+    def registrar_medicion(self, valor):
+        self.mediciones.append(valor)
+
+    # 3. Método para calcular el promedio de las mediciones registradas
+    def calcular_promedio(self):
+        # Si la lista está vacía, evitamos dividir por cero devolviendo None
+        if len(self.mediciones) == 0:
+            return None
+        return sum(self.mediciones) / len(self.mediciones)
+
+    # 4. Método para armar un texto resumen con el estado del objeto
+    def devolver_estado(self):
+        prom = self.calcular_promedio()
+        if prom is None:
+            return f"Sensor {self.nombre}: No registra mediciones aún."
+        return f"Sensor {self.nombre} | Promedio: {prom:.2f}°C | Historial: {self.mediciones}"
+
+"""8. Ejercicio integrador
+A partir de la clase Sensor definida anteriormente, desarrollar un programa que:
+- Represente mediante una matriz de NumPy las mediciones realizadas por tres sensores. 
+Cada fila deberá corresponder a un sensor y cada columna, a una medición.
+- Recorra las filas de la matriz utilizando range().
+- Cree un objeto Sensor por cada fila y registre en él todas sus mediciones.
+- Almacene los objetos creados en una lista.
+- Recorra la lista de sensores y obtenga, para cada uno, su nombre, su promedio y su estado."""
+
+# Matriz de NumPy proporcionada
+mediciones_matriz = np.array([
+    [24.0, 25.0, 24.5],  # Fila 0: Sensor 1
+    [31.0, 32.5, 30.0],  # Fila 1: Sensor 2
+    [27.0, 26.5, 28.0]   # Fila 2: Sensor 3
+])
+
+# Lista vacía donde vamos a guardar los objetos sensores que fabriquemos
+lista_sensores = []
+
+# Recorremos las filas de la matriz utilizando un range() basado en el largo de la matriz
+for i in range(len(mediciones_matriz)):
+    # Fabricamos un objeto Sensor nuevo por cada fila dándole un nombre dinámico
+    nombre_sensor = f"Sensor_{i + 1}"
+    nuevo_objeto_sensor = Sensor(nombre_sensor)
+    
+    # Extraemos el renglón entero de temperaturas de la fila actual 'i'
+    fila_temperaturas = mediciones_matriz[i]
+    
+    # Registramos cada temperatura de la fila adentro de nuestro objeto
+    for valor_temperatura in fila_temperaturas:
+        nuevo_objeto_sensor.registrar_medicion(valor_temperatura)
+        
+    # Guardamos el objeto sensor ya cargado adentro de nuestra lista general
+    lista_sensores.append(nuevo_objeto_sensor)
+
+# Recorremos la lista de sensores para mostrar en pantalla el estado final de cada uno
+for s in lista_sensores:
+    print(s.devolver_estado())
